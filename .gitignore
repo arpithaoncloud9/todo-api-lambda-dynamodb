@@ -1,0 +1,39 @@
+# Node.js
+node_modules/
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+package-lock.json
+
+# Lambda build artifacts
+*.zip
+dist/
+.bundle/
+.esbuild/
+
+# Environment variables
+.env
+.env.*
+*.local
+
+# AWS SAM / CDK / Serverless Framework (if used later)
+.aws-sam/
+cdk.out/
+.serverless/
+
+# Logs
+logs/
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# VSCode
+.vscode/
+.history/
+
+# Temporary files
+*.tmp
+*.swp
+*.swo
