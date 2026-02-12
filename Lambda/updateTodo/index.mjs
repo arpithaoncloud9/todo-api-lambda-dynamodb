@@ -118,7 +118,6 @@ ReturnValues: "ALL_NEW"
 
 const result = await ddb.send(new UpdateCommand(params));
 
-  
 
 return {
 
