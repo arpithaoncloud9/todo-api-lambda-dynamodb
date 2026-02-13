@@ -838,12 +838,16 @@ Your DynamoDB item shows:
 
 Before building the DELETE API, confirm the table structure:
 
+<img width="936" height="179" alt="DynamoDB_table" src="https://github.com/user-attachments/assets/1f3adddd-f55a-454e-9d35-94b7a0343cf0" />
+
+
 - **Table name:** `todos`
 - **Partition key:** `userID` (String)
 - **Sort key:** `taskID` (String)
 
 Since this table uses a **composite primary key**, the DELETE operation must include **both** keys.
 
+<img width="867" height="101" alt="DynamoDB_keys" src="https://github.com/user-attachments/assets/081b800e-7db3-4ddc-b29d-8f8526deb444" />
 
 
 ### **6.2 Create the Lambda Function for DELETE**
@@ -1015,6 +1019,7 @@ If the item does not exist:
 }
 ```
 
-![[DELETE.png]]
+<img width="1076" height="405" alt="DELETE" src="https://github.com/user-attachments/assets/58c759d0-b751-4136-9708-2cce83c22b99" />
+
 
 After a successful delete, check DynamoDB — the item should be removed.
