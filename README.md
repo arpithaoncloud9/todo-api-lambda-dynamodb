@@ -832,3 +832,189 @@ Your DynamoDB item shows:
 
 <img width="1888" height="852" alt="image" src="https://github.com/user-attachments/assets/aad56698-35b9-4dc1-9e3f-8152effb6bcf" />
 
+## STEP 6 — Build DELETE /todos/{userID}/{taskID} (Remove a task)
+
+### **6.1 Confirm your DynamoDB Keys**
+
+Before building the DELETE API, confirm the table structure:
+
+- **Table name:** `todos`
+- **Partition key:** `userID` (String)
+- **Sort key:** `taskID` (String)
+
+Since this table uses a **composite primary key**, the DELETE operation must include **both** keys.
+
+
+
+### **6.2 Create the Lambda Function for DELETE**
+
+Navigate to **AWS Lambda → Create function**:
+
+- **Function name:** `deleteTodoFunction`
+- **Runtime:** Node.js 24.x
+- **Execution role:** Use the same role as your other CRUD Lambdas, or create a new one with DynamoDB delete permissions.
+
+After the function is created:
+
+- Go to **Configuration → Environment variables**
+- Add:
+    - **Key:** `TABLE_NAME`
+    - **Value:** `todos`
+- Save
+### **6.3 Add IAM Permission for DeleteItem**
+
+In the Lambda execution role, ensure the policy includes:
+```json
+{
+  "Effect": "Allow",
+  "Action": [
+    "dynamodb:DeleteItem"
+  ],
+  "Resource": "arn:aws:dynamodb:REGION:ACCOUNT_ID:table/todos"
+}
+```
+If your existing CRUD policy already includes `DeleteItem`, you can skip this step.
+
+### **6.4 Add the Lambda Code (Node.js 24.x, AWS SDK v3)**
+
+This version is updated for your **userID + taskID** key structure:
+
+```javascript
+import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+import { DeleteItemCommand } from "@aws-sdk/client-dynamodb";
+
+const client = new DynamoDBClient({});
+
+export const handler = async (event) => {
+  const tableName = process.env.TABLE_NAME;
+
+  try {
+    const userID = event.pathParameters?.userID;
+    const taskID = event.pathParameters?.taskID;
+
+    if (!userID || !taskID) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({
+          message: "Missing 'userID' or 'taskID' in path parameters"
+        }),
+      };
+    }
+
+    const params = {
+      TableName: tableName,
+      Key: {
+        userID: { S: userID },
+        taskID: { S: taskID }
+      },
+      ReturnValues: "ALL_OLD"
+    };
+
+    const result = await client.send(new DeleteItemCommand(params));
+
+    if (!result.Attributes) {
+      return {
+        statusCode: 404,
+        body: JSON.stringify({
+          message: `Todo with userID '${userID}' and taskID '${taskID}' not found`
+        }),
+      };
+    }
+
+    return {
+      statusCode: 200,
+      body: JSON.stringify({
+        message: `Todo '${taskID}' deleted successfully for user '${userID}'`
+      }),
+    };
+
+  } catch (error) {
+    console.error("Error deleting todo:", error);
+
+    return {
+      statusCode: 500,
+      body: JSON.stringify({
+        message: "Internal server error while deleting todo",
+        error: error.message,
+      }),
+    };
+  }
+};
+```
+### **6.5 Wire the DELETE Method in API Gateway**
+
+In **API Gateway → your REST API**:
+
+1. Select the `/todos` **resource**.
+2. Click **Actions → Create Resource**:
+    - **Resource name:** `{userID}`
+    - **Resource path:** '/todos/{userID}/'
+3.  Create `{taskID}` under `{userID}`
+     - Click on **/{userID}**
+     - Actions → **Create Resource**
+     Enter:
+    - **Resource name:** `{taskID}`
+    - **Resource path:** `{taskID}`
+4. Click **Create Resource**
+    - You will see 
+    - /todos/{userID}/{taskID}
+5. Select the new `/{userID}/{taskID}` resource.
+6. Click **Actions → Create Method** → choose **DELETE**.
+7. Configure the method:
+    - **Integration type:** Lambda Function
+    - **Use Lambda Proxy integration:** enabled
+    - **Lambda function:** `deleteTodoFunction`
+8. Save 
+
+### **6.6: Enable CORS (if needed)**
+
+For the `/{userID}/{taskID}` resource:
+
+- Select the **DELETE** method
+- Click **Actions → Enable CORS**
+- Confirm and apply the changes
+
+(If CORS was already enabled at the parent resource, this may not be required.)
+
+### **6.7: Deploy the API**
+
+- Click **Actions → Deploy API**
+- Choose your stage (e.g., `prod`)
+
+Your base invoke URL will look like:
+```
+https://abc123.execute-api.us-east-1.amazonaws.com/prod
+```
+
+Your DELETE endpoint will be:
+-  Replace userID and taskID from the table
+```
+DELETE https://abc123.execute-api.us-east-1.amazonaws.com/prod/todos/{userID}/{taskID}
+```
+### **6.8: Test in Postman**
+
+1. Open **Postman**.
+2. Set the method to **DELETE**.
+3. Use a URL like:
+```
+https://abc123.execute-api.us-east-1.amazonaws.com/prod/todos/maria123/task-001
+```
+4. Click **Send**.
+
+If the item exists, you should see:
+```json
+{
+  "message": "Todo 'task-001' deleted successfully for user 'maria123'"
+}
+```
+
+If the item does not exist:
+```json
+{
+  "message": "Todo with userID 'maria123' and taskID 'task-001' not found"
+}
+```
+
+![[DELETE.png]]
+
+After a successful delete, check DynamoDB — the item should be removed.
